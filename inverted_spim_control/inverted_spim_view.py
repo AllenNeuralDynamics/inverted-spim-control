@@ -10,7 +10,7 @@ from view.widgets.acquisition_widgets.volume_model import VolumeModel
 from view.widgets.miscellaneous_widgets.gl_shaded_box_item import GLShadedBoxItem
 import numpy as np
 from qtpy.QtGui import QMatrix4x4, QVector3D, QQuaternion, QColor
-from math import sin, cos, pi
+from math import sin, cos, pi, sqrt
 from qtpy.QtWidgets import QGridLayout, QWidget, QComboBox, QSizePolicy, QScrollArea, QDockWidget, \
     QLabel, QPushButton, QSplitter, QLineEdit, QSpinBox, QDoubleSpinBox, QProgressBar, QSlider, QApplication, \
     QHBoxLayout, QFrame, QFileDialog, QMessageBox
@@ -146,6 +146,15 @@ class InvertedVolumeModel(VolumeModel):
         """ Hide path if not in tiling plane"""
         super().toggle_view_plane(button)
         self.path.setVisible(not self.view_plane != (self.coordinate_plane[0], self.coordinate_plane[1]))
+
+    def _update_opts(self):
+        """Overwrite to adjust view in (self.coordinate_plane[0], self.coordinate_plane[1])"""
+
+        super()._update_opts()
+        view_plane = self.view_plane
+        root = sqrt(2.0) / 2.0
+        if view_plane == (self.coordinate_plane[0], self.coordinate_plane[2]):
+            self.opts['rotation'] = QQuaternion(0, root, 0, 0)
 
 class InvertedSPIMAcquisitionView(AcquisitionView):
     """View for Inverted SPIM Acquisition"""
