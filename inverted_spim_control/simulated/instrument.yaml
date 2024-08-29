@@ -6,7 +6,7 @@ instrument:
       filters: ['BP488']
     "488":
       lasers: [ '488nm' ]
-      filters: [ 'BP488' ]
+      filters: [ 'BP405' ]
     "561":
       lasers: ['561nm']
       filters: ['BP561']
