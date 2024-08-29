@@ -1,0 +1,142 @@
+instrument:
+  id: speakeasy
+  channels:
+    "405":
+      lasers: ['405nm']
+      filters: ['BP488']
+    "488":
+      lasers: [ '488nm' ]
+      filters: [ 'BP488' ]
+    "561":
+      lasers: ['561nm']
+      filters: ['BP561']
+    "638":
+      lasers: ['638nm']
+      filters: ['LP638']
+  devices:
+    ASI MS-8000 x axis:
+      type: scanning_stage
+      driver: voxel.devices.stage.simulated
+      module: Stage
+      init:
+        hardware_axis: x
+        instrument_axis: z
+      properties:
+        speed_mm_s: 1.0
+    ASI MS-8000 y axis:
+      type: tiling_stage
+      port: COM4
+      driver: voxel.devices.stage.simulated
+      module: Stage
+      init:
+        hardware_axis: y
+        instrument_axis: x
+      properties:
+        speed_mm_s: 1.0
+    ASI MS-8000 z axis:
+      type: tiling_stage
+      driver: voxel.devices.stage.simulated
+      module: Stage
+      init:
+        hardware_axis: z
+        instrument_axis: y
+      properties:
+        speed_mm_s: 1.0
+    ASI FW-1000:
+      type: filter_wheel
+      driver: voxel.devices.filterwheel.simulated
+      module: FilterWheel
+      init:
+        id: 0
+        filters:
+          BP405: 0
+          BP488: 1
+          BP561: 2
+          LP638: 3
+          MB405/488/561/638: 4
+          Empty1: 5
+          Empty2: 6
+      subdevices:
+        BP405:
+          type: filter
+          driver: voxel.devices.filter.simulated
+          module: Filter
+          init:
+            id: BP405
+        BP488:
+          type: filter
+          driver: voxel.devices.filter.simulated
+          module: Filter
+          init:
+            id: BP488
+        BP561:
+          type: filter
+          driver: voxel.devices.filter.simulated
+          module: Filter
+          init:
+            id: BP561
+        LP638:
+          type: filter
+          driver: voxel.devices.filter.simulated
+          module: Filter
+          init:
+            id: LP638
+        MB405/488/561/638:
+          type: filter
+          driver: voxel.devices.filter.simulated
+          module: Filter
+          init:
+            id: MB405/488/561/638
+    488nm:
+      type: laser
+      driver: voxel.devices.lasers.simulated
+      module: SimulatedLaser
+      init:
+        id : 488nm
+        wavelength: 488
+    638nm:
+      type: laser
+      driver: voxel.devices.lasers.simulated
+      module: SimulatedLaser
+      init:
+        id: 638nm
+        wavelength: 638
+    561nm:
+      type: laser
+      driver: voxel.devices.lasers.simulated
+      module: SimulatedLaser
+      init:
+        id: 561nm
+        wavelength: 561
+    405nm:
+      type: laser
+      driver: voxel.devices.lasers.simulated
+      module: SimulatedLaser
+      init:
+        id: 405nm
+        wavelength: 405
+    C15440-20UP:
+      type: camera
+      driver: voxel.devices.camera.simulated
+      init:
+        id: sim000
+      module: Camera
+      properties:
+        exposure_time_ms: 20.0
+        pixel_type: mono16
+        height_offest_px: 4744
+        height_px: 1152
+        width_offset_px: 6528
+        width_px: 1152
+        trigger:
+          mode: 'off'
+          polarity: rising
+          source: external
+    PCIe-6738:
+      type: daq
+      driver: voxel.devices.daq.ni
+      module: DAQ
+      init:
+        dev: Dev2
+
+

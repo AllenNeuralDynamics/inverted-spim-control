@@ -1,0 +1,137 @@
+instrument:
+  id: speakeasy
+  channels:
+    "488":
+      lasers: ['488nm']
+      filters: ['BP488']
+  devices:
+    ASI MS-8000:
+      type: stage
+      driver: tigerasi.tiger_controller
+      module: TigerController
+      init:
+        com_port: COM4
+      subdevices:
+        ASI MS-8000 x axis:
+          type: scanning_stage
+          driver: voxel.devices.stage.asi
+          module: Stage
+          init:
+            port: COM4
+            hardware_axis: x
+            instrument_axis: z
+          properties:
+            speed_mm_s: 1.0
+        ASI MS-8000 y axis:
+          type: tiling_stage
+          port: COM4
+          driver: voxel.devices.stage.asi
+          module: Stage
+          init:
+            port: COM4
+            hardware_axis: y
+            instrument_axis: x
+          properties:
+            speed_mm_s: 1.0
+        ASI MS-8000 z axis:
+          type: tiling_stage
+          driver: voxel.devices.stage.asi
+          module: Stage
+          init:
+            port: COM4
+            hardware_axis: z
+            instrument_axis: y
+          properties:
+            speed_mm_s: 1.0
+        ASI FW-1000:
+          type: filter_wheel
+          driver: voxel.devices.filterwheel.asi
+          module: FilterWheel
+          init:
+            id: 0
+            filters:
+              BP405: 0
+              BP488: 1
+              BP561: 2
+              LP638: 3
+              MB405/488/561/638: 4
+              Empty1: 5
+              Empty2: 6
+          subdevices:
+            BP405:
+              type: filter
+              driver: voxel.devices.filter.asi
+              module: Filter
+              init:
+                id: BP405
+            BP488:
+              type: filter
+              driver: voxel.devices.filter.asi
+              module: Filter
+              init:
+                id: BP488
+            BP561:
+              type: filter
+              driver: voxel.devices.filter.asi
+              module: Filter
+              init:
+                id: BP561
+            BP638:
+              type: filter
+              driver: voxel.devices.filter.asi
+              module: Filter
+              init:
+                id: BP638
+            MB405/488/561/638:
+              type: filter
+              driver: voxel.devices.filter.asi
+              module: Filter
+              init:
+                id: MB405/488/561/638
+    combiner_0:
+      type: combiner
+      driver: oxxius_laser
+      module: L6CCCombiner
+      init:
+        port: COM5
+      subdevices:
+          488nm:
+            type: laser
+            driver: voxel.devices.lasers.oxxius.oxxius_lbx
+            module: OxxiusLBXLaser
+            color: blue
+            init:
+              id : 488nm
+              wavelength: 488
+              prefix: L5
+              coefficients:
+                1: 2.3125
+                0: -35.09
+            properties:
+              cdrh: OFF
+              constant_current: ON
+              modulation_mode: digital
+    C15440-20UP:
+      type: camera
+      driver: voxel.devices.camera.hamamatsu_dcam
+      module: Camera
+      init:
+        id: "500748"
+      properties:
+        exposure_time_ms: 20.0
+        pixel_type: mono16
+        roi:
+          width_px: 2304
+          height_px: 2304
+        trigger:
+          mode: start
+          source: external
+          polarity: positive
+    PCIe-6738:
+      type: daq
+      driver: voxel.devices.daq.ni
+      module: DAQ
+      init:
+        dev: Dev1
+
+
