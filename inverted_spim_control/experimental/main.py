@@ -5,7 +5,8 @@ import os
 import numpy as np
 from ruamel.yaml import YAML
 from inverted_spim_control.metadata_launch import MetadataLaunch
-from inverted_spim_control.inverted_spim_view import InvertedSPIMInstrumentView, ExASPIMAcquisitionView
+from inverted_spim_control.inverted_spim_view import InvertedSPIMAcquisitionView
+from view.instrument_view import InstrumentView
 from voxel.instruments.instrument import Instrument
 from inverted_spim_control.inverted_spim_acquisition import InvertedSPIMAcquisition
 
@@ -29,13 +30,13 @@ if __name__ == "__main__":
     instrument = Instrument(config_path=INSTRUMENT_YAML,
                             yaml_handler=yaml,
                             log_level='INFO')
-    # acquisition
+    # acquisition_widgets
     acquisition = InvertedSPIMAcquisition(instrument=instrument,
                                           config_filename=ACQUISITION_YAML,
                                           yaml_handler=yaml,
                                           log_level='INFO')
-    instrument_view = InvertedSPIMInstrumentView(instrument, GUI_YAML, log_level='INFO')
-    acquisition_view = ExASPIMAcquisitionView(acquisition, instrument_view)
+    instrument_view = InstrumentView(instrument, GUI_YAML, log_level='INFO')
+    acquisition_view = InvertedSPIMAcquisitionView(acquisition, instrument_view)
 
     MetadataLaunch(instrument=instrument,
                    acquisition=acquisition,

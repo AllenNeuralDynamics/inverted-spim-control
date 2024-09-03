@@ -252,6 +252,9 @@ acquisition_view:
   coordinate_plane: [ '-x', 'y', 'z' ]
   unit: 'mm'
   acquisition_widgets:
+    volume_model:
+      init:
+        crossing_angle: 45
     channel_plan:
       init:
         properties:

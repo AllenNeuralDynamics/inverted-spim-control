@@ -14,7 +14,7 @@ class MetaDataLaunchTests(unittest.TestCase):
     """tests for MetaDataLaunch"""
 
     def test_writing(self):
-        """Test ability to write acquisition json"""
+        """Test ability to write acquisition_widgets json"""
         instrument_config = {'instrument':
                                  {'channels':
                                       {'CH639':
@@ -37,7 +37,7 @@ class MetaDataLaunchTests(unittest.TestCase):
                                        x_anatomical_direction='Anterior to Posterior',
                                        y_anatomical_direction='Inferior to Superior',
                                        z_anatomical_direction='Left to Right')
-        acquisition_config = {'acquisition':
+        acquisition_config = {'acquisition_widgets':
             {'tiles':
                 [
                     {'channel': 'CH639',
@@ -136,7 +136,7 @@ class MetaDataLaunchTests(unittest.TestCase):
         self.assertEqual(expected_schema, actual_schema)
 
     def test_saving(self):
-        """Test ability to write and save acquisition json"""
+        """Test ability to write and save acquisition_widgets json"""
         # TODO: if unit tests ever get automated by github this one will prob fail because it writes and deletes files
         instrument_config = {'instrument':
                                  {'channels':
@@ -160,7 +160,7 @@ class MetaDataLaunchTests(unittest.TestCase):
                                        x_anatomical_direction='Anterior to Posterior',
                                        y_anatomical_direction='Inferior to Superior',
                                        z_anatomical_direction='Left to Right')
-        acquisition_config = {'acquisition':
+        acquisition_config = {'acquisition_widgets':
             {'tiles':
                 [
                     {'channel': 'CH639',

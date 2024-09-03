@@ -30,7 +30,7 @@ if __name__ == "__main__":
     instrument = Instrument(config_path=INSTRUMENT_YAML,
                             yaml_handler=yaml,
                             log_level='INFO')
-    # acquisition
+    # acquisition_widgets
     acquisition = InvertedSPIMAcquisition(instrument=instrument,
                                           config_filename=ACQUISITION_YAML,
                                           yaml_handler=yaml,

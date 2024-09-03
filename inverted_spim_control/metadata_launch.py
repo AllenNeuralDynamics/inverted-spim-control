@@ -25,16 +25,16 @@ class MetadataLaunch:
                  acquisition_view: ExASPIMAcquisitionView):
 
         """
-        Create instrument, acquisition, and gui. Connect acquisitionEnded to parsing metadata method
+        Create instrument, acquisition_widgets, and gui. Connect acquisitionEnded to parsing metadata method
         :param instrument: ExASPIM instrument object
-        :param acquisition: ExASPIMAcquisition acquisition object
+        :param acquisition: ExASPIMAcquisition acquisition_widgets object
         :param instrument_view: ExASPIMInstrumentView object
         :param acquisition_view: ExASPIMAcquisitionView object
         """
 
         # instrument
         self.instrument = instrument
-        # acquisition
+        # acquisition_widgets
         self.acquisition = acquisition
 
         self.instrument_view = instrument_view
@@ -47,7 +47,7 @@ class MetadataLaunch:
         self.acquisition_view.acquisitionEnded.connect(self.create_acquisition_json)
 
     def create_acquisition_json(self):
-        """Method to create and save acquisition.json"""
+        """Method to create and save acquisition_widgets.json"""
         if getattr(self.acquisition, 'transfers', {}) != {}:  # save to external paths
             for device_name, transfer_dict in getattr(self.acquisition, 'transfers', {}).items():
                 for transfer in transfer_dict.values():
@@ -67,7 +67,7 @@ class MetadataLaunch:
                     acquisition_model.write_standard_file(output_directory=save_to, prefix="exaspim")
 
     def parse_metadata(self, external_drive: str, local_drive: str):
-        """Method to parse through tiles to create an acquisition json
+        """Method to parse through tiles to create an acquisition_widgets json
         :param external_drive: where data is transferred to
         :param local_drive: where data is written"""
 
@@ -100,7 +100,7 @@ class MetadataLaunch:
                     }
         tiles = []
         channels = self.instrument.config['instrument']['channels']
-        for tile in self.acquisition.config['acquisition']['tiles']:
+        for tile in self.acquisition.config['acquisition_widgets']['tiles']:
             tile_ch = tile['channel']
             laser = channels[tile_ch]['lasers'][0]
             excitation_wavelength = self.instrument.lasers[laser].wavelength

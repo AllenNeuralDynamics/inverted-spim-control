@@ -18,7 +18,7 @@ class InvertedSPIMAcquisition(Acquisition):
 
         super().__init__(instrument, DIRECTORY / Path(config_filename), yaml_handler, log_level)
 
-        # verify acquisition
+        # verify acquisition_widgets
         self._verify_acquisition()
 
         # initialize threads
@@ -59,7 +59,7 @@ class InvertedSPIMAcquisition(Acquisition):
             # initialize transfer threads
             self.transfer_threads = {}
 
-            for tile in self.config['acquisition']['tiles']:
+            for tile in self.config['acquisition_widgets']['tiles']:
                 # check local disk space and run if enough disk space
                 if self.check_local_tile_disk_space(tile):
 
@@ -161,7 +161,7 @@ class InvertedSPIMAcquisition(Acquisition):
                         self.log.info(f'running routines for {device_type} {device_name}')
                         for routine_name, routine in routine_dictionary.items():
                             # TODO: how to figure out what to pass in routines for different devices.
-                            # config seems like a good place but what about arguments generated in the acquisition?
+                            # config seems like a good place but what about arguments generated in the acquisition_widgets?
                             # make it a rule that routines must have filename property? And need to pass in device to start?
                             device_object = getattr(self.instrument, inflection.pluralize(device_type))[device_name]
                             routine.filename = filenames[device_name] + '_' + routine_name
@@ -226,7 +226,7 @@ class InvertedSPIMAcquisition(Acquisition):
                         transfer_thread.wait_until_finished()
         finally:
             if getattr(self, 'transfers', {}) != {}:  # save to external paths
-                # save acquisition config
+                # save acquisition_widgets config
                 for device_name, transfer_dict in getattr(self, 'transfers', {}).items():
                     for transfer in transfer_dict.values():
                         self.update_current_state_config()
@@ -239,7 +239,7 @@ class InvertedSPIMAcquisition(Acquisition):
                         self.instrument.save_config(Path(transfer.external_path, transfer.acquisition_name)/'instrument_config.yaml')
 
             else: # no transfers so save locally
-                # save acquisition config
+                # save acquisition_widgets config
                 for device_name, writer_dict in self.writers.items():
                     for writer in writer_dict.values():
                         self.update_current_state_config()
@@ -388,7 +388,7 @@ class InvertedSPIMAcquisition(Acquisition):
             del buffer
 
     def stop_acquisition(self):
-        """Overwriting to better stop acquisition"""
+        """Overwriting to better stop acquisition_widgets"""
 
         self.stop_engine.set()
         for thread in self.acquisition_threads.values():
