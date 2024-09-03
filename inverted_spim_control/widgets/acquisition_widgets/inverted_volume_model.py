@@ -26,10 +26,6 @@ class InvertedVolumeModel(VolumeModel):
                                               cos(radians(self.angle)),
                                               self.fov_position[2] * self.polarity[2],
                                               0, 0, 0, 1))
-        reference = GLAxisItem()
-        reference.setSize(0.686592, 0.686592,0.686592)
-        self.addItem(reference)
-
 
     def update_model(self, attribute_name):
         """Overwrite to display tiles at angle
@@ -117,23 +113,26 @@ class InvertedVolumeModel(VolumeModel):
         coords = self.grid_coords.reshape([-1, 3])  # flatten array
         dims = self.scan_volumes.flatten()  # flatten array
 
-
         # set rotation
         root = sqrt(2.0) / 2.0
         if view_plane == (self.coordinate_plane[0], self.coordinate_plane[1]):
             self.opts['rotation'] = QQuaternion(-1, 0, 0, 0)
         elif view_plane == (self.coordinate_plane[0], self.coordinate_plane[2]):
-            self.opts['rotation'] =  QQuaternion(-root, root, 0, 0)
+            self.opts['rotation'] = QQuaternion(-root, root, 0, 0)
             # take into account end of tile and account for difference in size if z included in view
-            coords = np.concatenate((coords, [[x, y+(self.fov_dimensions[1]), (z + sz)+self.fov_dimensions[2]] for (x, y, z), sz in zip(coords, dims)]))
+            coords = np.concatenate((coords, [[x, y,
+                                               (z + sz)] for (x, y, z), sz in zip(coords, dims)]))
         else:
             self.opts['rotation'] = QQuaternion(-root, 0, -root, 0)
-            coords = np.concatenate((coords, [[x, y, (z + sz)+cos(radians(self.angle))] for (x, y, z), sz in zip(coords, dims)]))
+            coords = np.concatenate((coords, [[x, y,
+                                               (z + sz)] for (x, y, z), sz in zip(coords, dims)]))
         extrema = {'x_min': min(coords[:, 0]), 'x_max': max(coords[:, 0]),
                    'y_min': min(coords[:, 1]), 'y_max': max(coords[:, 1]),
                    'z_min': min(coords[:, 2]), 'z_max': max(coords[:, 2])}
 
-        fov = {**{axis: dim for axis, dim in zip(['x', 'y', 'z'], self.fov_dimensions)}}
+        fov = {'x': self.fov_dimensions[0],
+               'y': self.fov_dimensions[1] * sin(radians(self.angle)),
+               'z': self.fov_dimensions[1] * cos(radians(self.angle))}
         pos = {axis: dim for axis, dim in zip(['x', 'y', 'z'], self.fov_position)}
 
         distances = {'xy': [sqrt((pos[view_plane[0]] - x) ** 2 + (pos[view_plane[1]] - y) ** 2) for x, y, z in coords],
