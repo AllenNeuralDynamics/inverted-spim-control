@@ -57,8 +57,6 @@ class GLInvertedShadedBoxItem(GLMeshItem):
         vertexes[6][2] += z_offset
         vertexes[7][2] += z_offset
 
-        print(vertexes)
-
         return vertexes, faces
 
     def color(self):
@@ -104,36 +102,34 @@ class GLInvertedShadedBoxItem(GLMeshItem):
         x, y, z = [self._pos[0, 0, i] + x for i, x in enumerate(self.size())]
         x_pos, y_pos, z_pos = self._pos[0, 0, :]
 
-        z_offset = y * cos(radians(self._angle))
-
-        y = y * sin(radians(self._angle))
-        y_pos = y_pos * sin(radians(self._angle))
+        z_offset = self.size()[1] * cos(radians(self._angle))
+        y = self._pos[0, 0, 1] + (self.size()[1] * sin(radians(self._angle)))
 
         glVertex3f(x_pos, y_pos, z_pos)
         glVertex3f(x_pos, y_pos, z)
         glVertex3f(x, y_pos, z_pos)
         glVertex3f(x, y_pos, z)
-        glVertex3f(x_pos, y, z_pos+z_offset)
-        glVertex3f(x_pos, y, z+z_offset)
-        glVertex3f(x, y, z_pos+z_offset)
+        glVertex3f(x_pos, y, z_pos + z_offset)
+        glVertex3f(x_pos, y, z + z_offset)
+        glVertex3f(x, y, z_pos + z_offset)
         glVertex3f(x, y, z)
 
         glVertex3f(x_pos, y_pos, z_pos)
-        glVertex3f(x_pos, y, z_pos+z_offset)
+        glVertex3f(x_pos, y, z_pos + z_offset)
         glVertex3f(x, y_pos, z_pos)
-        glVertex3f(x, y, z_pos+z_offset)
+        glVertex3f(x, y, z_pos + z_offset)
         glVertex3f(x_pos, y_pos, z)
-        glVertex3f(x_pos, y, z+z_offset)
+        glVertex3f(x_pos, y, z + z_offset)
         glVertex3f(x, y_pos, z)
-        glVertex3f(x, y, z+z_offset)
+        glVertex3f(x, y, z + z_offset)
 
         glVertex3f(x_pos, y_pos, z_pos)
         glVertex3f(x, y_pos, z_pos)
-        glVertex3f(x_pos, y, z_pos+z_offset)
-        glVertex3f(x, y, z_pos+z_offset)
+        glVertex3f(x_pos, y, z_pos + z_offset)
+        glVertex3f(x, y, z_pos + z_offset)
         glVertex3f(x_pos, y_pos, z)
         glVertex3f(x, y_pos, z)
-        glVertex3f(x_pos, y, z+z_offset)
-        glVertex3f(x, y, z+z_offset)
+        glVertex3f(x_pos, y, z + z_offset)
+        glVertex3f(x, y, z + z_offset)
 
         glEnd()
