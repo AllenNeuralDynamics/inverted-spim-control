@@ -111,7 +111,7 @@ class GLInvertedShadedBoxItem(GLMeshItem):
         glVertex3f(x, y_pos, z)
         glVertex3f(x_pos, y, z_pos + z_offset)
         glVertex3f(x_pos, y, z + z_offset)
-        glVertex3f(x, y, z_pos + z_offset)
+        glVertex3f(x, y, z_pos )
         glVertex3f(x, y, z)
 
         glVertex3f(x_pos, y_pos, z_pos)
