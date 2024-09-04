@@ -12,10 +12,12 @@ import math
 
 DIRECTORY = Path(__file__).parent.resolve()
 
+
 class InvertedSPIMAcquisition(Acquisition):
 
     def __init__(self, instrument: Instrument, config_filename: str, yaml_handler: YAML, log_level='INFO'):
 
+        self.metadata = None  # initialize as none since setting up metadata class with call setup_class
         super().__init__(instrument, DIRECTORY / Path(config_filename), yaml_handler, log_level)
 
         # verify acquisition_widgets
@@ -32,7 +34,7 @@ class InvertedSPIMAcquisition(Acquisition):
         super()._setup_class(device, settings)
 
         # set acquisition_name attribute if it exists for object
-        if hasattr(device, 'acquisition_name'):
+        if hasattr(device, 'acquisition_name') and self.metadata is not None:
             setattr(device, 'acquisition_name', self.metadata.acquisition_name)
 
     def _verify_acquisition(self):
@@ -46,7 +48,7 @@ class InvertedSPIMAcquisition(Acquisition):
                     chunk_size = writer.chunk_count_px
                 else:
                     if writer.chunk_count_px != chunk_size:
-                        raise ValueError (f'Chunk sizes of writers must all be {chunk_size}')
+                        raise ValueError(f'Chunk sizes of writers must all be {chunk_size}')
         self.chunk_count_px = chunk_size  # define chunk size to be used later in acquisiiton
 
     def run(self):
@@ -105,7 +107,8 @@ class InvertedSPIMAcquisition(Acquisition):
                         instrument_axis = scanning_stage.instrument_axis
                         tile_position = tile['position_mm'][instrument_axis]
                         backlash_removal_position = tile_position - 0.01
-                        self.log.info(f'moving stage {scanning_stage_id} to {instrument_axis} = {backlash_removal_position} mm')
+                        self.log.info(
+                            f'moving stage {scanning_stage_id} to {instrument_axis} = {backlash_removal_position} mm')
                         scanning_stage.move_absolute_mm(tile_position - 0.01, wait=False)
                         self.log.info(f'moving stage {scanning_stage_id} to {instrument_axis} = {tile_position} mm')
                         scanning_stage.move_absolute_mm(tile_position, wait=False)
@@ -230,26 +233,29 @@ class InvertedSPIMAcquisition(Acquisition):
                 for device_name, transfer_dict in getattr(self, 'transfers', {}).items():
                     for transfer in transfer_dict.values():
                         self.update_current_state_config()
-                        self.save_config(Path(transfer.external_path, transfer.acquisition_name)/'acquisition_config.yaml')
+                        self.save_config(
+                            Path(transfer.external_path, transfer.acquisition_name) / 'acquisition_config.yaml')
 
                 # save instrument config
                 for device_name, transfer_dict in getattr(self, 'transfers', {}).items():
                     for transfer in transfer_dict.values():
                         self.instrument.update_current_state_config()
-                        self.instrument.save_config(Path(transfer.external_path, transfer.acquisition_name)/'instrument_config.yaml')
+                        self.instrument.save_config(
+                            Path(transfer.external_path, transfer.acquisition_name) / 'instrument_config.yaml')
 
-            else: # no transfers so save locally
+            else:  # no transfers so save locally
                 # save acquisition_widgets config
                 for device_name, writer_dict in self.writers.items():
                     for writer in writer_dict.values():
                         self.update_current_state_config()
-                        self.save_config(Path(writer.local_path, writer.acquisition_name)/'acquisition_config.yaml')
+                        self.save_config(Path(writer.local_path, writer.acquisition_name) / 'acquisition_config.yaml')
 
                 # save instrument config
                 for device_name, writer_dict in self.writers.items():
                     for writer in writer_dict.values():
                         self.instrument.update_current_state_config()
-                        self.instrument.save_config(Path(writer.local_path, writer.acquisition_name)/'instrument_config.yaml')
+                        self.instrument.save_config(
+                            Path(writer.local_path, writer.acquisition_name) / 'instrument_config.yaml')
 
     def engine(self, tile, filename, camera, writers, processes):
 
@@ -265,7 +271,7 @@ class InvertedSPIMAcquisition(Acquisition):
             writer.y_pos_mm = tile['position_mm']['y']
             writer.z_pos_mm = tile['position_mm']['z']
             writer.x_voxel_size_um = 0.748 * camera.binning  # TODO pull this from instrument yaml
-            writer.y_voxel_size_um = 0.748 * camera.binning # TODO pull this from instrument yaml
+            writer.y_voxel_size_um = 0.748 * camera.binning  # TODO pull this from instrument yaml
             writer.z_voxel_size_um = tile['step_size']
             writer.filename = filename
             writer.channel = tile['channel']
@@ -282,12 +288,14 @@ class InvertedSPIMAcquisition(Acquisition):
             process.column_count_px = camera.width_px // camera.binning
             process.frame_count_px = tile['steps']
             process.filename = filename
-            img_bytes = numpy.prod(camera.height_px // camera.binning * camera.width_px // camera.binning) * numpy.dtype(
+            img_bytes = numpy.prod(
+                camera.height_px // camera.binning * camera.width_px // camera.binning) * numpy.dtype(
                 process.data_type).itemsize
             buffer = SharedMemory(create=True, size=int(img_bytes))
             process_buffers[process_name] = buffer
-            process.buffer_image = numpy.ndarray((camera.height_px // camera.binning, camera.width_px // camera.binning),
-                                                 dtype=process.data_type, buffer=buffer.buf)
+            process.buffer_image = numpy.ndarray(
+                (camera.height_px // camera.binning, camera.width_px // camera.binning),
+                dtype=process.data_type, buffer=buffer.buf)
             process.prepare(buffer.name)
 
         # set up writer and camera
@@ -308,10 +316,10 @@ class InvertedSPIMAcquisition(Acquisition):
                     task.start()
 
         remainder = tile['steps'] % self.chunk_count_px
-       
+
         # Start scanning axis last
         for scanning_stage_id, scanning_stage in self.instrument.scanning_stages.items():
-            scanning_stage.start() # TODO: how to make sure driver adheres to this?
+            scanning_stage.start()  # TODO: how to make sure driver adheres to this?
 
         prev_frame_count = 0
         ref_daq = list(self.instrument.daqs.values())[0]
