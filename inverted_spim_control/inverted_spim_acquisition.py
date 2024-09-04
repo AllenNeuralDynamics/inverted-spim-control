@@ -307,55 +307,44 @@ class InvertedSPIMAcquisition(Acquisition):
                 if task is not None:
                     task.start()
 
-        frame_index = 0
-        last_frame_index = tile['steps'] - 1
-
-        chunk_count = math.ceil(tile['steps'] / self.chunk_count_px)
         remainder = tile['steps'] % self.chunk_count_px
-        last_chunk_size = self.chunk_count_px if not remainder else remainder
-
+       
         # Start scanning axis last
         for scanning_stage_id, scanning_stage in self.instrument.scanning_stages.items():
             scanning_stage.start() # TODO: how to make sure driver adheres to this?
 
         prev_frame_count = 0
-
-        chunk_lock = Lock()
-        while self.ni.counter_task.read() < tile['steps']:
-            curr_frame_count = self.ni.counter_task.read()
+        ref_daq = list(self.instrument.daqs.values())[0]
+        while ref_daq.pulse_count < tile['steps']:
+            curr_frame_count = ref_daq.pulse_count
             if curr_frame_count != prev_frame_count and curr_frame_count < tile['steps']:
                 if curr_frame_count - prev_frame_count != 1:
                     self.log.warning(f"Dropped {curr_frame_count - prev_frame_count} frames")
                 prev_frame_count = curr_frame_count
-                chunk_index = self.ni.counter_task.read() % chunk_count
+                chunk_index = curr_frame_count % self.chunk_count_px
                 # Grab camera frame
                 current_frame = camera.grab_frame()
-                camera.signal_acquisition_state()
-                # TODO: Update writer variables?
-                # writer.signal_progress_percent
-                else:
-                    for img_buffer in img_buffers.values():
-                        img_buffer.add_image(current_frame)
-                    img_buffer.buffer_index = curr_chunk_index
-                    if curr_chunk_index == chunk_size_frames - 1:
-                        while not stack_writer.done_reading.is_set():
-                            sleep(0.001)
-                        # Dispatch chunk to each StackWriter compression process.
-                        # Toggle double buffer to continue writing images.
-                        # To read the new data, the StackWriter needs the name of
-                        # the current read memory location and a trigger to start.
-                        # Lock out the buffer before toggling it such that we
-                        # don't provide an image from a place that hasn't been
-                        # written yet.
-                        with chunk_lock:
-                            img_buffer.toggle_buffers()
-                            if self.cfg.ext_storage_dir is not None:
-                                stack_writer.shm_name = \
-                                    img_buffer.read_buf_mem_name
-                                stack_writer.done_reading.clear()
-                frames_collected += 1
-                self.log.info(f'Total frames: {frames} '
-                              f'-> Frames collected: {curr_frame_count}')
+                for img_buffer in img_buffers.values():
+                    img_buffer.add_image(current_frame)
+                    # Dispatch either a full chunk of frames or the last chunk,
+                    # which may not be a multiple of the chunk size.
+                    if chunk_index == self.chunk_count_px - 1:
+                        for writer_name, writer in writers.items():
+                            while not writer.done_reading.is_set() and not self.stop_engine.is_set():
+                                time.sleep(0.001)
+                            # Dispatch chunk to each StackWriter compression process.
+                            # Toggle double buffer to continue writing images.
+                            # To read the new data, the StackWriter needs the name of
+                            # the current read memory location and a trigger to start.
+                            # Lock out the buffer before toggling it such that we
+                            # don't provide an image from a place that hasn't been
+                            # written yet.
+                            with chunk_locks[writer_name]:
+                                img_buffers[writer_name].toggle_buffers()
+                                if writer.path is not None:
+                                    writer.shm_name = \
+                                        img_buffers[writer_name].read_buf_mem_name
+                                    writer.done_reading.clear()
 
         camera.stop()
 
