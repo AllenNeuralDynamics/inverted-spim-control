@@ -175,4 +175,15 @@ class InvertedVolumeModel(VolumeModel):
             center.get('z', 0))
 
         self.update()
+    def add_fov_image(self, image: np.array, levels: list):
+        """add image to model assuming image has same fov dimensions and orientation. Overwriting to transform
+        :param image: numpy array of image to display in model
+        :param levels: levels for passed in image"""
 
+        super().add_fov_image(image, levels)
+        x, y, z = self.fov_position
+        gl_image = self.fov_images[image.tobytes()]
+        gl_image.setTransform(QMatrix4x4(self.fov_dimensions[0] / image.shape[0], 0, 0, x * self.polarity[0],
+                                         0, (self.fov_dimensions[1] / image.shape[1])*cos(radians(self.angle)), -sin(radians(self.angle)), y * self.polarity[1],
+                                         0, sin(radians(self.angle)),cos(radians(self.angle)), z * self.polarity[2],
+                                         0, 0, 0, 1))
