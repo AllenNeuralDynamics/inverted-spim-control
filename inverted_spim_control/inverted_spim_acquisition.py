@@ -26,10 +26,10 @@ class InvertedSPIMAcquisition(Acquisition):
         self.transfer_threads = dict()
         self.stop_engine = Event()  # Event to flag a stop in engine
 
-    def _setup_operation(self, device: object, settings: dict):
+    def _setup_class(self, device: object, settings: dict):
         """Overwrite so metadata class can pass in acquisition_name to devices that require it"""
 
-        super()._setup_operation(device, settings)
+        super()._setup_class(device, settings)
 
         # set acquisition_name attribute if it exists for object
         if hasattr(device, 'acquisition_name'):
@@ -98,7 +98,7 @@ class InvertedSPIMAcquisition(Acquisition):
                                 f'waiting for stage {tiling_stage_id}: {instrument_axis} = {tiling_stage.position_mm} -> {tile_position} mm')
                             time.sleep(1.0)
 
-                    # prepare the scanning stage for step and shoot behavior
+                    # prepare the scanning stage for MOVE_TO_NEXT_ABS_POSITION
                     for scanning_stage_id, scanning_stage in self.instrument.scanning_stages.items():
                         self.log.info(f'setting up scanning stage: {scanning_stage_id}')
                         # grab stage axis letter
@@ -112,7 +112,7 @@ class InvertedSPIMAcquisition(Acquisition):
                         self.log.info(f'backlash on {scanning_stage_id} removed')
                         step_size_um = tile['step_size']
                         self.log.info(f'setting step shoot scan step size to {step_size_um} um')
-                        scanning_stage.setup_step_shoot_scan(step_size_um)
+                        scanning_stage.move_to_next_position_scan(step_size_um)
 
                     for scanning_stage_id, scanning_stage in self.instrument.scanning_stages.items():
                         while scanning_stage.is_axis_moving():
@@ -301,6 +301,12 @@ class InvertedSPIMAcquisition(Acquisition):
         for process in processes.values():
             process.start()
 
+        for daq_id, daq in self.instrument.daqs.items():
+            self.log.info(f'starting daq {daq_id}')
+            for task in [daq.ao_task, daq.do_task, daq.co_task]:
+                if task is not None:
+                    task.start()
+
         frame_index = 0
         last_frame_index = tile['steps'] - 1
 
@@ -308,65 +314,48 @@ class InvertedSPIMAcquisition(Acquisition):
         remainder = tile['steps'] % self.chunk_count_px
         last_chunk_size = self.chunk_count_px if not remainder else remainder
 
-        # Images arrive serialized in repeating channel order.
-        for stack_index in range(tile['steps']):
-            if self.stop_engine.is_set():
-                break
-            chunk_index = stack_index % self.chunk_count_px
-            # Start a batch of pulses to generate more frames and movements.
-            if chunk_index == 0:
-                chunks_filled = math.floor(stack_index / self.chunk_count_px)
-                remaining_chunks = chunk_count - chunks_filled
-                # num_pulses = last_chunk_size if remaining_chunks == 1 else self.chunk_count_px
-                # for daq_name, daq in self.instrument.daqs.items():
-                    # daq.co_task.timing.cfg_implicit_timing(sample_mode= AcqType.FINITE,
-                    #                                         samps_per_chan= num_pulses)
-                    #################### IMPORTANT ####################
-                    # for the exaspim, the NIDAQ is the master, so we start this last
-                for daq_id, daq in self.instrument.daqs.items():
-                    self.log.info(f'starting daq {daq_id}')
-                    for task in [daq.ao_task, daq.do_task, daq.co_task]:
-                        if task is not None:
-                            task.start()
+        # Start scanning axis last
+        for scanning_stage_id, scanning_stage in self.instrument.scanning_stages.items():
+            scanning_stage.start() # TODO: how to make sure driver adheres to this?
 
-            # Grab camera frame
-            current_frame = camera.grab_frame()
-            camera.signal_acquisition_state()
-            # TODO: Update writer variables?
-            # writer.signal_progress_percent
-            for img_buffer in img_buffers.values():
-                img_buffer.add_image(current_frame)
+        prev_frame_count = 0
 
-            # Dispatch either a full chunk of frames or the last chunk,
-            # which may not be a multiple of the chunk size.
-            if chunk_index + 1 == self.chunk_count_px or stack_index == last_frame_index:
-                for daq_name, daq in self.instrument.daqs.items():
-                    daq.stop()
-                while not writer.done_reading.is_set() and not self.stop_engine.is_set():
-                    time.sleep(0.001)
-                for writer_name, writer in writers.items():
-                    # Dispatch chunk to each StackWriter compression process.
-                    # Toggle double buffer to continue writing images.
-                    # To read the new data, the StackWriter needs the name of
-                    # the current read memory location and a trigger to start.
-                    # Lock out the buffer before toggling it such that we
-                    # don't provide an image from a place that hasn't been
-                    # written yet.
-                    with chunk_locks[writer_name]:
-                        img_buffers[writer_name].toggle_buffers()
-                        if writer.path is not None:
-                            writer.shm_name = \
-                                img_buffers[writer_name].read_buf_mem_name
-                            writer.done_reading.clear()
-
-            # check on processes
-            for process in processes.values():
-                while process.new_image.is_set():
-                    time.sleep(0.1)
-                process.buffer_image[:, :] = current_frame
-                process.new_image.set()
-
-            frame_index += 1
+        chunk_lock = Lock()
+        while self.ni.counter_task.read() < tile['steps']:
+            curr_frame_count = self.ni.counter_task.read()
+            if curr_frame_count != prev_frame_count and curr_frame_count < tile['steps']:
+                if curr_frame_count - prev_frame_count != 1:
+                    self.log.warning(f"Dropped {curr_frame_count - prev_frame_count} frames")
+                prev_frame_count = curr_frame_count
+                chunk_index = self.ni.counter_task.read() % chunk_count
+                # Grab camera frame
+                current_frame = camera.grab_frame()
+                camera.signal_acquisition_state()
+                # TODO: Update writer variables?
+                # writer.signal_progress_percent
+                else:
+                    for img_buffer in img_buffers.values():
+                        img_buffer.add_image(current_frame)
+                    img_buffer.buffer_index = curr_chunk_index
+                    if curr_chunk_index == chunk_size_frames - 1:
+                        while not stack_writer.done_reading.is_set():
+                            sleep(0.001)
+                        # Dispatch chunk to each StackWriter compression process.
+                        # Toggle double buffer to continue writing images.
+                        # To read the new data, the StackWriter needs the name of
+                        # the current read memory location and a trigger to start.
+                        # Lock out the buffer before toggling it such that we
+                        # don't provide an image from a place that hasn't been
+                        # written yet.
+                        with chunk_lock:
+                            img_buffer.toggle_buffers()
+                            if self.cfg.ext_storage_dir is not None:
+                                stack_writer.shm_name = \
+                                    img_buffer.read_buf_mem_name
+                                stack_writer.done_reading.clear()
+                frames_collected += 1
+                self.log.info(f'Total frames: {frames} '
+                              f'-> Frames collected: {curr_frame_count}')
 
         camera.stop()
 

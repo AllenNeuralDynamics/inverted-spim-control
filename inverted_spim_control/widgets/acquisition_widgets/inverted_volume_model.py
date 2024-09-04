@@ -3,7 +3,6 @@ from inverted_spim_control.widgets.miscellaneous_widgets.gl_inverted_shaded_box_
 import numpy as np
 from qtpy.QtGui import QMatrix4x4, QQuaternion, QVector3D
 from math import sin, cos, pi, sqrt, radians, tan
-from pyqtgraph.opengl import GLScatterPlotItem, GLAxisItem
 
 class InvertedVolumeModel(VolumeModel):
     """Display tiles at 45 degree angle"""
