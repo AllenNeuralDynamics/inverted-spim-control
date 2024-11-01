@@ -99,8 +99,6 @@ class InvertedSPIMAcquisition(Acquisition):
                             self.log.info(
                                 f'waiting for stage {tiling_stage_id}: {instrument_axis} = {tiling_stage.position_mm} -> {tile_position} mm')
                             time.sleep(1.0)
-                    #TODO: setup stage correctly
-                    # prepare the scanning stage for MOVE_TO_NEXT_ABS_POSITION,  stage_scan
                     for scanning_stage_id, scanning_stage in self.instrument.scanning_stages.items():
                         # TODO: Turen backlash off, set to 0
                         self.log.info(f'setting up scanning stage: {scanning_stage_id}')

@@ -89,28 +89,28 @@ instrument:
             id: MB405/488/561/638
     488nm:
       type: laser
-      driver: voxel.devices.lasers.simulated
+      driver: voxel.devices.laser.simulated
       module: SimulatedLaser
       init:
         id : 488nm
         wavelength: 488
     638nm:
       type: laser
-      driver: voxel.devices.lasers.simulated
+      driver: voxel.devices.laser.simulated
       module: SimulatedLaser
       init:
         id: 638nm
         wavelength: 638
     561nm:
       type: laser
-      driver: voxel.devices.lasers.simulated
+      driver: voxel.devices.laser.simulated
       module: SimulatedLaser
       init:
         id: 561nm
         wavelength: 561
     405nm:
       type: laser
-      driver: voxel.devices.lasers.simulated
+      driver: voxel.devices.laser.simulated
       module: SimulatedLaser
       init:
         id: 405nm

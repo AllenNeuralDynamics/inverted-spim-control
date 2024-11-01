@@ -165,7 +165,7 @@ class InvertedVolumeModel(VolumeModel):
 
         else:
             center[y] = (((pos[y] + furthest_tile[y]) / 2) + (fov[y] / 2 * view_pol[1])) * view_pol[1]
-            vert_dist = (abs(pos[y] - furthest_tile[y]) + (fov[y] * 2)) / 2 * scaling
+            vert_dist = (abs(pos[y] - furthest_tile[y]) + (fov[y] * 2)) / 2 * scaling * tan(radians(self.opts['fov']))
         # @Micah in ortho mode it seems to scale properly with x1200... not sure how to explain why though
         # not sure if this actually works, and whether it needs to be copied to other places in the fx
         self.opts['distance'] = horz_dist * 1200 if horz_dist > vert_dist else vert_dist * 1200
