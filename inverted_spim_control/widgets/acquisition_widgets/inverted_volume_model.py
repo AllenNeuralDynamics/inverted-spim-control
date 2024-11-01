@@ -103,44 +103,46 @@ class InvertedVolumeModel(VolumeModel):
         super().toggle_view_plane(button)
         self.path.setVisible(not self.view_plane != (self.coordinate_plane[0], self.coordinate_plane[1]))
 
-    def _update_opts(self):
-        """Overwrite to adjust view in (self.coordinate_plane[0], self.coordinate_plane[1])"""
+    def _update_opts(self) -> None:
+        """Update view of widget. Note that x/y notation refers to horizontal/vertical dimensions of grid view"""
 
         view_plane = self.view_plane
         view_pol = [self.polarity[self.coordinate_plane.index(view_plane[0])],
                     self.polarity[self.coordinate_plane.index(view_plane[1])]]
         coords = self.grid_coords.reshape([-1, 3])  # flatten array
-        dims = self.scan_volumes.flatten()  # flatten array
+        dimensions = self.scan_volumes.flatten()  # flatten array
 
         # set rotation
         root = sqrt(2.0) / 2.0
         if view_plane == (self.coordinate_plane[0], self.coordinate_plane[1]):
             self.opts['rotation'] = QQuaternion(-1, 0, 0, 0)
-        elif view_plane == (self.coordinate_plane[0], self.coordinate_plane[2]):
-            self.opts['rotation'] = QQuaternion(-root, root, 0, 0)
-            # take into account end of tile and account for difference in size if z included in view
-            coords = np.concatenate((coords, [[x, y,
-                                               (z + sz)] for (x, y, z), sz in zip(coords, dims)]))
         else:
-            self.opts['rotation'] = QQuaternion(-root, 0, -root, 0)
-            coords = np.concatenate((coords, [[x, y,
-                                               (z + sz)] for (x, y, z), sz in zip(coords, dims)]))
-        extrema = {'x_min': min(coords[:, 0]), 'x_max': max(coords[:, 0]),
-                   'y_min': min(coords[:, 1]), 'y_max': max(coords[:, 1]),
-                   'z_min': min(coords[:, 2]), 'z_max': max(coords[:, 2])}
+            self.opts['rotation'] = QQuaternion(-root, 0, -root, 0) if \
+                view_plane == (self.coordinate_plane[2], self.coordinate_plane[1]) else QQuaternion(-root, root, 0, 0)
+            # take into account end of tile and account for difference in size if z included in view
+            coords = np.concatenate((coords, [[x,
+                                               y,
+                                               (z + sz)] for (x, y, z), sz in zip(coords, dimensions)]))
 
-        fov = {'x': self.fov_dimensions[0],
-               'y': self.fov_dimensions[1] * sin(radians(self.angle)),
-               'z': self.fov_dimensions[1] * cos(radians(self.angle))}
-        pos = {axis: dim for axis, dim in zip(['x', 'y', 'z'], self.fov_position)}
+        extrema = {f'{self.coordinate_plane[0]}_min': min(coords[:, 0]),
+                   f'{self.coordinate_plane[0]}_max': max(coords[:, 0]),
+                   f'{self.coordinate_plane[1]}_min': min(coords[:, 1]),
+                   f'{self.coordinate_plane[1]}_max': max(coords[:, 1]),
+                   f'{self.coordinate_plane[2]}_min': min(coords[:, 2]),
+                   f'{self.coordinate_plane[2]}_max': max(coords[:, 2])}
 
-        distances = {'xy': [sqrt((pos[view_plane[0]] - x) ** 2 + (pos[view_plane[1]] - y) ** 2) for x, y, z in coords],
-                     'xz': [sqrt((pos[view_plane[0]] - x) ** 2 + (pos[view_plane[1]] - z) ** 2) for x, y, z in coords],
-                     'zy': [sqrt((pos[view_plane[0]] - z) ** 2 + (pos[view_plane[1]] - y) ** 2) for x, y, z in coords]}
+        fov = {plane: fov for plane, fov in zip(self.coordinate_plane, self.fov_dimensions)}
+        pos = {axis: dim for axis, dim in zip(self.coordinate_plane, self.fov_position)}
+        distances = {self.coordinate_plane[0] + self.coordinate_plane[1]:
+                         [sqrt((pos[view_plane[0]] - x) ** 2 + (pos[view_plane[1]] - y) ** 2) for x, y, z in coords],
+                     self.coordinate_plane[0] + self.coordinate_plane[2]:
+                         [sqrt((pos[view_plane[0]] - x) ** 2 + (pos[view_plane[1]] - z) ** 2) for x, y, z in coords],
+                     self.coordinate_plane[2] + self.coordinate_plane[1]:
+                         [sqrt((pos[view_plane[0]] - z) ** 2 + (pos[view_plane[1]] - y) ** 2) for x, y, z in coords]}
         max_index = distances[''.join(view_plane)].index(max(distances[''.join(view_plane)], key=abs))
-        furthest_tile = {'x': coords[max_index][0],
-                         'y': coords[max_index][1],
-                         'z': coords[max_index][2]}
+        furthest_tile = {self.coordinate_plane[0]: coords[max_index][0],
+                         self.coordinate_plane[1]: coords[max_index][1],
+                         self.coordinate_plane[2]: coords[max_index][2]}
         center = {}
 
         # Horizontal sizing, if fov_position is within grid or farthest distance is between grid tiles
@@ -162,19 +164,20 @@ class InvertedVolumeModel(VolumeModel):
             # View doesn't scale when changing vertical size so take into account the dif between the height and width
             vert_dist = ((extrema[f'{y}_max'] - extrema[f'{y}_min']) + (fov[y] * 2)) / 2 \
                         * tan(radians(self.opts['fov'])) * scaling
-
         else:
             center[y] = (((pos[y] + furthest_tile[y]) / 2) + (fov[y] / 2 * view_pol[1])) * view_pol[1]
-            vert_dist = (abs(pos[y] - furthest_tile[y]) + (fov[y] * 2)) / 2 * scaling * tan(radians(self.opts['fov']))
+            vert_dist = (abs(pos[y] - furthest_tile[y]) + (fov[y] * 2)) / 2 * tan(radians(self.opts['fov'])) * scaling
         # @Micah in ortho mode it seems to scale properly with x1200... not sure how to explain why though
         # not sure if this actually works, and whether it needs to be copied to other places in the fx
         self.opts['distance'] = horz_dist * 1200 if horz_dist > vert_dist else vert_dist * 1200
+
         self.opts['center'] = QVector3D(
-            center.get('x', 0),
-            center.get('y', 0),
-            center.get('z', 0))
+            center.get(self.coordinate_plane[0], 0),
+            center.get(self.coordinate_plane[1], 0),
+            center.get(self.coordinate_plane[2], 0))
 
         self.update()
+        
     def add_fov_image(self, image: np.array, levels: list):
         """add image to model assuming image has same fov dimensions and orientation. Overwriting to transform
         :param image: numpy array of image to display in model
